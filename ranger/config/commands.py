@@ -1121,6 +1121,7 @@ class rename(Command):
     def execute(self):
         from ranger.container.file import File
         from os import access
+        from os.path import abspath, basename, dirname, join, samefile
 
         new_name = self.rest(1)
 
@@ -1135,6 +1136,13 @@ class rename(Command):
 
         if self.fm.rename(self.fm.thisfile, new_name):
             file_new = File(new_name)
+            # new_name was resolved against the physical cwd, but thisdir
+            # lists its files under its logical path, which differs when it
+            # was entered through a symlink.
+            dest = abspath(new_name)
+            if samefile(dirname(dest), self.fm.thisdir.path):
+                file_new = File(join(self.fm.thisdir.path, basename(dest)),
+                                path_is_abs=True)
             self.fm.bookmarks.update_path(self.fm.thisfile.path, file_new)
             self.fm.tags.update_path(self.fm.thisfile.path, file_new.path)
             self.fm.thisdir.pointed_obj = file_new
